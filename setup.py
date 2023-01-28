@@ -65,11 +65,12 @@ class Setup(object):
     # Encodes the KZG commitment that evaluates to the given values in the group
     def commit(self, values: Polynomial) -> G1Point:
         assert values.basis == Basis.LAGRANGE
-
         # Run inverse FFT to convert values from Lagrange basis to monomial basis
         # Optional: Check values size does not exceed maximum power setup can handle
         # Compute linear combination of setup with values
-        return NotImplemented
+        monomial = values.ifft()
+        assert len(monomial.values) <= len(self.powers_of_x)
+        return ec_lincomb(list(zip(self.powers_of_x, monomial.values)))
 
     # Generate the verification key for this program with the given setup
     def verification_key(self, pk: CommonPreprocessedInput) -> VerificationKey:
