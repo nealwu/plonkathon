@@ -81,8 +81,10 @@ class VerificationKey:
         Z_H_eval = zeta**group_order - 1
 
         # 6. Compute Lagrange polynomial evaluation L_0(ζ)
-        root = Scalar.root_of_unity(group_order)
-        L_0_eval = root * Z_H_eval / (group_order - root)
+        # root = Scalar.root_of_unity(group_order)
+        # L_0_eval = root * Z_H_eval / (group_order * (zeta - root))
+        L_0_eval = Z_H_eval / (group_order * (zeta - 1))
+        # L_0_eval = Polynomial([Scalar(1)] + [Scalar(0)] * (group_order - 1), Basis.LAGRANGE).barycentric_eval(zeta)
 
         # 7. Compute public input polynomial evaluation PI(ζ).
         PI = Polynomial(
