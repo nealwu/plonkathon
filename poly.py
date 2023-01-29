@@ -42,6 +42,9 @@ class Polynomial:
                     self.basis
                 )
 
+    def __radd__(self, other):
+        return self + other
+
     def __sub__(self, other):
         if isinstance(other, Polynomial):
             assert len(self.values) == len(other.values)
@@ -64,7 +67,6 @@ class Polynomial:
                     self.basis
                 )
 
-
     def __mul__(self, other):
         if isinstance(other, Polynomial):
             assert self.basis == Basis.LAGRANGE
@@ -81,6 +83,9 @@ class Polynomial:
                 [x * other for x in self.values],
                 self.basis,
             )
+
+    def __rmul__(self, other):
+        return self * other
 
     def __truediv__(self, other):
         if isinstance(other, Polynomial):
