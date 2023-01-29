@@ -324,6 +324,8 @@ class Prover:
         Z_H = Polynomial([Scalar(-1)] + [Scalar(0)] * (group_order - 1) + [Scalar(1)], Basis.LAGRANGE)
         Z_H_eval = Z_H.barycentric_eval(zeta)
 
+        PI_eval = self.PI.barycentric_eval(zeta)
+
         # Move T1, T2, T3 into the coset extended Lagrange basis
         # Move pk.QL, pk.QR, pk.QM, pk.QO, pk.QC into the coset extended Lagrange basis
         # Move Z into the coset extended Lagrange basis
@@ -356,11 +358,15 @@ class Prover:
         # it has to be "linear" in the proof items, hence why we can only use each
         # proof item once; any further multiplicands in each term need to be
         # replaced with their evaluations at Z, which do still need to be provided
-        R = (
-            self.pk.QM * self.a_eval * self.b_eval + self.pk.QL * self.a_eval + self.pk.QR * self.b_eval + self.pk.QO * self.c_eval + self.PI.barycentric_eval(zeta) + self.pk.QC
-            + (self.Z * self.rlc(self.a_eval, zeta) * self.rlc(self.b_eval, 2 * zeta) * self.rlc(self.c_eval, 3 * zeta)
+        Q_stuff = self.pk.QM * self.a_eval * self.b_eval + self.pk.QL * self.a_eval + self.pk.QR * self.b_eval + self.pk.QO * self.c_eval + PI_eval + self.pk.QC
+        perm_stuff = (
+            (self.Z * self.rlc(self.a_eval, zeta) * self.rlc(self.b_eval, 2 * zeta) * self.rlc(self.c_eval, 3 * zeta)
             - (self.pk.S3 * self.beta + self.gamma + self.c_eval) * self.rlc(self.a_eval, self.s1_eval) * self.rlc(self.b_eval, self.s2_eval) * self.z_shifted_eval) * self.alpha
-            + (self.Z - Scalar(1)) * L0_eval * self.alpha**2
+        )
+        L1_stuff = (self.Z - Scalar(1)) * L0_eval
+
+        R = (
+            Q_stuff + perm_stuff * self.alpha + L1_stuff * self.alpha**2
             - (self.T1 + self.T2 * zeta**group_order + self.T3 * zeta**(2 * group_order)) * Z_H_eval
         )
 
