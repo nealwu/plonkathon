@@ -321,8 +321,7 @@ class Prover:
         L0 = Polynomial([Scalar(1)] + [Scalar(0)] * (group_order - 1), Basis.LAGRANGE)
         L0_eval = L0.barycentric_eval(zeta)
 
-        Z_H = Polynomial([Scalar(-1)] + [Scalar(0)] * (group_order - 1) + [Scalar(1)], Basis.LAGRANGE)
-        Z_H_eval = Z_H.barycentric_eval(zeta)
+        Z_H_eval = zeta**group_order - 1
 
         PI_eval = self.PI.barycentric_eval(zeta)
 
@@ -360,8 +359,8 @@ class Prover:
         # replaced with their evaluations at Z, which do still need to be provided
         Q_stuff = self.pk.QM * self.a_eval * self.b_eval + self.pk.QL * self.a_eval + self.pk.QR * self.b_eval + self.pk.QO * self.c_eval + PI_eval + self.pk.QC
         perm_stuff = (
-            (self.Z * self.rlc(self.a_eval, zeta) * self.rlc(self.b_eval, 2 * zeta) * self.rlc(self.c_eval, 3 * zeta)
-            - (self.pk.S3 * self.beta + self.gamma + self.c_eval) * self.rlc(self.a_eval, self.s1_eval) * self.rlc(self.b_eval, self.s2_eval) * self.z_shifted_eval) * self.alpha
+            self.Z * self.rlc(self.a_eval, zeta) * self.rlc(self.b_eval, 2 * zeta) * self.rlc(self.c_eval, 3 * zeta)
+            - self.rlc(self.c_eval, self.pk.S3) * self.rlc(self.a_eval, self.s1_eval) * self.rlc(self.b_eval, self.s2_eval) * self.z_shifted_eval
         )
         L1_stuff = (self.Z - Scalar(1)) * L0_eval
 
@@ -422,4 +421,4 @@ class Prover:
         return x.coset_extended_lagrange_to_coeffs(self.fft_cofactor)
 
     def rlc(self, term_1, term_2):
-        return term_1 + term_2 * self.beta + self.gamma
+        return term_2 * self.beta + term_1 + self.gamma
