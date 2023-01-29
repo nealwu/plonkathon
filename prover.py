@@ -357,7 +357,7 @@ class Prover:
         # proof item once; any further multiplicands in each term need to be
         # replaced with their evaluations at Z, which do still need to be provided
         R = (
-            self.pk.QM * self.a_eval * self.b_eval + self.pk.QL * self.a_eval + self.pk.QR * self.b_eval + self.pk.QO * self.c_eval + self.PI + self.pk.QC
+            self.pk.QM * self.a_eval * self.b_eval + self.pk.QL * self.a_eval + self.pk.QR * self.b_eval + self.pk.QO * self.c_eval + self.PI.barycentric_eval(zeta) + self.pk.QC
             + (self.Z * self.rlc(self.a_eval, zeta) * self.rlc(self.b_eval, 2 * zeta) * self.rlc(self.c_eval, 3 * zeta)
             - (self.pk.S3 * self.beta + self.gamma + self.c_eval) * self.rlc(self.a_eval, self.s1_eval) * self.rlc(self.b_eval, self.s2_eval) * self.z_shifted_eval) * self.alpha
             + (self.Z - Scalar(1)) * L0_eval * self.alpha**2
