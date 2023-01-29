@@ -1,6 +1,6 @@
 import py_ecc.bn128 as b
 from utils import *
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from curve import *
 from transcript import Transcript
 from poly import Polynomial, Basis
@@ -93,11 +93,11 @@ class VerificationKey:
 
         # Recover the commitment to the linearization polynomial R,
         # exactly the same as what was created by the prover
-        a_1, b_1, c_1 = pf.msg_1
-        (z_1,) = pf.msg_2
-        t_lo_1, t_mid_1, t_hi_1 = pf.msg_3
-        a_eval, b_eval, c_eval, s1_eval, s2_eval, z_shifted_eval = pf.msg_4
-        W_z_1, W_zw_1 = pf.msg_5
+        a_1, b_1, c_1 = astuple(pf.msg_1)
+        (z_1,) = astuple(pf.msg_2)
+        t_lo_1, t_mid_1, t_hi_1 = astuple(pf.msg_3)
+        a_eval, b_eval, c_eval, s1_eval, s2_eval, z_shifted_eval = astuple(pf.msg_4)
+        W_z_1, W_zw_1 = astuple(pf.msg_5)
 
         R_com = ec_lincomb([
             (self.Qm, a_eval * b_eval),
@@ -106,7 +106,7 @@ class VerificationKey:
             (self.Qo, c_eval),
             (b.G1, PI_eval),
             (self.Qc, 1),
-            (self.z_1, self.rlc(a_eval, zeta) * self.rlc(b_eval, 2 * zeta) * self.rlc(c_eval, 3 * zeta) * alpha),
+            (z_1, self.rlc(a_eval, zeta) * self.rlc(b_eval, 2 * zeta) * self.rlc(c_eval, 3 * zeta) * alpha),
             (self.S3, -beta * self.rlc(a_eval, s1_eval) * self.rlc(b_eval, s2_eval) * z_shifted_eval * alpha),
             (b.G1, -(c_eval + gamma) * self.rlc(a_eval, s1_eval) * self.rlc(b_eval, s2_eval) * z_shifted_eval * alpha),
             (z_1, L_0_eval * alpha**2),
@@ -118,11 +118,27 @@ class VerificationKey:
 
         # Verify that R(z) = 0 and the prover-provided evaluations
         # A(z), B(z), C(z), S1(z), S2(z) are all correct
-        # W_z_check =
+        product_com = ec_lincomb([
+            (R_com, 1),
+            (a_1, v),
+            (b_1, v**2),
+            (c_1, v**3),
+            (self.S1, v**4),
+            (self.S2, v**5),
+            (b.G1, -a_eval * v),
+            (b.G1, -b_eval * v**2),
+            (b.G1, -c_eval * v**3),
+            (b.G1, -s1_eval * v**4),
+            (b.G1, -s2_eval * v**5),
+        ])
+
+        if b.pairing(b.add(self.X_2, ec_mul(b.G2, -zeta)), W_z_1) != b.pairing(b.G2, product_com):
+            assert False
+            return False
 
         # Verify that the provided value of Z(zeta*w) is correct
 
-        return False
+        return True
 
     # Compute challenges (should be same as those computed by prover)
     def compute_challenges(
@@ -137,5 +153,5 @@ class VerificationKey:
 
         return beta, gamma, alpha, zeta, v, u
 
-    def rlc(term_1, term_2):
+    def rlc(self, term_1, term_2):
         return term_1 + self.beta * term_2 + self.gamma
