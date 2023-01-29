@@ -55,13 +55,11 @@ class Prover:
         # Collect fixed and public information
         # FIXME: Hash pk and PI into transcript
         public_vars = self.program.get_public_assignments()
-        print("public_vars:", public_vars)
         PI = Polynomial(
             [Scalar(-witness[v]) for v in public_vars]
             + [Scalar(0) for _ in range(self.group_order - len(public_vars))],
             Basis.LAGRANGE,
         )
-        print("PI values:", PI.values)
         self.PI = PI
 
         # Round 1
