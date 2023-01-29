@@ -74,18 +74,51 @@ class VerificationKey:
     # Basic, easier-to-understand version of what's going on
     def verify_proof_unoptimized(self, group_order: int, pf, public=[]) -> bool:
         # 4. Compute challenges
+        beta, gamma, alpha, zeta, v, u = self.compute_challenges(pf)
+        self.beta, self.gamma = beta, gamma
 
         # 5. Compute zero polynomial evaluation Z_H(ζ) = ζ^n - 1
+        Z_H_eval = zeta**group_order - 1
 
         # 6. Compute Lagrange polynomial evaluation L_0(ζ)
+        root = Scalar.root_of_unity(group_order)
+        L_0_eval = root * Z_H_eval / (group_order - root)
 
         # 7. Compute public input polynomial evaluation PI(ζ).
+        PI = Polynomial(
+            [Scalar(-x) for x in public] + [Scalar(0)] * (group_order - len(public)),
+            Basis.LAGRANGE,
+        )
+        PI_eval = PI.barycentric_eval(zeta)
 
         # Recover the commitment to the linearization polynomial R,
         # exactly the same as what was created by the prover
+        a_1, b_1, c_1 = pf.msg_1
+        (z_1,) = pf.msg_2
+        t_lo_1, t_mid_1, t_hi_1 = pf.msg_3
+        a_eval, b_eval, c_eval, s1_eval, s2_eval, z_shifted_eval = pf.msg_4
+        W_z_1, W_zw_1 = pf.msg_5
+
+        R_com = ec_lincomb([
+            (self.Qm, a_eval * b_eval),
+            (self.Ql, a_eval),
+            (self.Qr, b_eval),
+            (self.Qo, c_eval),
+            (b.G1, PI_eval),
+            (self.Qc, 1),
+            (self.z_1, self.rlc(a_eval, zeta) * self.rlc(b_eval, 2 * zeta) * self.rlc(c_eval, 3 * zeta) * alpha),
+            (self.S3, -beta * self.rlc(a_eval, s1_eval) * self.rlc(b_eval, s2_eval) * z_shifted_eval * alpha),
+            (b.G1, -(c_eval + gamma) * self.rlc(a_eval, s1_eval) * self.rlc(b_eval, s2_eval) * z_shifted_eval * alpha),
+            (z_1, L_0_eval * alpha**2),
+            (b.G1, -L_0_eval * alpha**2),
+            (t_lo_1, -Z_H_eval),
+            (t_mid_1, -Z_H_eval * zeta**group_order),
+            (t_hi_1, -Z_H_eval * zeta**(2 * group_order)),
+        ])
 
         # Verify that R(z) = 0 and the prover-provided evaluations
         # A(z), B(z), C(z), S1(z), S2(z) are all correct
+        # W_z_check =
 
         # Verify that the provided value of Z(zeta*w) is correct
 
@@ -103,3 +136,6 @@ class VerificationKey:
         u = transcript.round_5(proof.msg_5)
 
         return beta, gamma, alpha, zeta, v, u
+
+    def rlc(term_1, term_2):
+        return term_1 + self.beta * term_2 + self.gamma
