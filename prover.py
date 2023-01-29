@@ -192,7 +192,7 @@ class Prover:
 
         # List of roots of unity at 4x fineness, i.e. the powers of µ
         # where µ^(4n) = 1
-        roots_of_unity = Scalar.roots_of_unity(4 * group_order)
+        quarter_roots = Scalar.roots_of_unity(4 * group_order)
 
         # Using self.fft_expand, move A, B, C into coset extended Lagrange basis
         A_big = self.fft_expand(self.A)
@@ -225,7 +225,7 @@ class Prover:
 
         # Compute Z_H = X^N - 1, also in evaluation form in the coset
         Z_H_big = Polynomial(
-            values=[roots_of_unity[group_order * (i % 4)] - 1 for i in range(4 * group_order)],
+            values=[(r * self.fft_cofactor)**group_order - 1 for r in quarter_roots],
             basis=Basis.LAGRANGE,
         )
 
@@ -252,15 +252,14 @@ class Prover:
         # 3. The permutation accumulator equals 1 at the start point
         #    (Z - 1) * L0 = 0
         #    L0 = Lagrange polynomial, equal at all roots of unity except 1
-        X_poly_values = [Scalar(0)] * (4 * group_order)
-        X_poly_values[1] = Scalar(1)
-        X_poly = Polynomial(values=X_poly_values, basis=Basis.LAGRANGE)
+        X_poly_values = [Scalar(quarter_roots[4 * i]) for i in range(group_order)]
+        X_poly_big = self.fft_expand(Polynomial(values=X_poly_values, basis=Basis.LAGRANGE))
 
         QUOT_big = (
             A_big * B_big * QM_big + A_big * QL_big + B_big * QR_big + C_big * QO_big + PI_big + QC_big
-            + self.rlc(A_big, X_poly) * self.rlc(B_big, X_poly * Scalar(2)) * self.rlc(C_big, X_poly * Scalar(3)) * Z_big * self.alpha
-            - self.rlc(A_big, S1_big) * self.rlc(B_big, S2_big) * self.rlc(C_big, S3_big) * Z_big.shift(4) * self.alpha
-            + (Z_big - Scalar(1)) * L0_big * self.alpha * self.alpha
+            + self.rlc(A_big, X_poly_big) * self.rlc(B_big, X_poly_big * Scalar(2)) * self.rlc(C_big, X_poly_big * Scalar(3)) * Z_big * self.alpha
+            - self.rlc(A_big, S1_big) * self.rlc(B_big, S2_big) * self.rlc(C_big, S3_big) * Z_big_shifted * self.alpha
+            + (Z_big - Scalar(1)) * L0_big * self.alpha**2
         ) / Z_H_big
 
         # Sanity check: QUOT has degree < 3n
