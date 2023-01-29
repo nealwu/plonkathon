@@ -330,20 +330,6 @@ class Prover:
         # Move Z into the coset extended Lagrange basis
         # Move pk.S3 into the coset extended Lagrange basis
 
-        T1_big = self.fft_expand(self.T1)
-        T2_big = self.fft_expand(self.T2)
-        T3_big = self.fft_expand(self.T3)
-
-        QL_big = self.fft_expand(self.pk.QL)
-        QR_big = self.fft_expand(self.pk.QR)
-        QM_big = self.fft_expand(self.pk.QM)
-        QO_big = self.fft_expand(self.pk.QO)
-        QC_big = self.fft_expand(self.pk.QC)
-
-        Z_big = self.fft_expand(self.Z)
-
-        S3_big = self.fft_expand(self.pk.S3)
-
         # Compute the "linearization polynomial" R. This is a clever way to avoid
         # needing to provide evaluations of _all_ the polynomials that we are
         # checking an equation betweeen: instead, we can "skip" the first
@@ -382,6 +368,12 @@ class Prover:
 
         # Move A, B, C into the coset extended Lagrange basis
         # Move pk.S1, pk.S2 into the coset extended Lagrange basis
+        R_big = self.fft_expand(R)
+        A_big = self.fft_expand(self.A)
+        B_big = self.fft_expand(self.B)
+        C_big = self.fft_expand(self.C)
+        S1_big = self.fft_expand(self.pk.S1)
+        S2_big = self.fft_expand(self.pk.S2)
 
         # In the COSET EXTENDED LAGRANGE BASIS,
         # Construct W_Z = (
@@ -392,6 +384,18 @@ class Prover:
         #   + v**4 * (S1 - s1_eval)
         #   + v**5 * (S2 - s2_eval)
         # ) / (X - zeta)
+        X_minus_zeta = Polynomial([Scalar(-zeta), Scalar(1)] + [Scalar(0)] * (group_order - 2), Basis.MONOMIAL).fft()
+        X_minus_zeta_big = self.fft_expand(X_minus_zeta)
+        W_Z = (
+            R_big
+            + (A_big - self.a_eval) * self.v
+            + (B_big - self.b_eval) * self.v**2
+            + (C_big - self.c_eval) * self.v**3
+            + (S1_big - self.s1_eval) * self.v**4
+            + (S2_big - self.s2_eval) * self.v**5
+        ) / X_minus_zeta_big
+
+        W_z_coeffs = self.expanded_evals_to_coeffs(W_Z).values
 
         # Check that degree of W_z is not greater than n
         assert W_z_coeffs[group_order:] == [0] * (group_order * 3)
