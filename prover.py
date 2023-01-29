@@ -178,8 +178,8 @@ class Prover:
 
         # Construct Z, Lagrange interpolation polynomial for Z_values
         # Cpmpute z_1 commitment to Z polynomial
-        Z = Polynomial(values=Z_values, basis=Basis.LAGRANGE)
-        z_1 = setup.commit(Z)
+        self.Z = Polynomial(values=Z_values, basis=Basis.LAGRANGE)
+        z_1 = setup.commit(self.Z)
 
         # Return z_1
         return Message2(z_1)
@@ -192,23 +192,42 @@ class Prover:
 
         # List of roots of unity at 4x fineness, i.e. the powers of µ
         # where µ^(4n) = 1
+        roots_of_unity = Scalar.roots_of_unity(4 * group_order)
 
         # Using self.fft_expand, move A, B, C into coset extended Lagrange basis
+        A_big = self.fft_expand(self.A)
+        B_big = self.fft_expand(self.B)
+        C_big = self.fft_expand(self.C)
 
         # Expand public inputs polynomial PI into coset extended Lagrange
+        PI_big = self.fft_expand(self.PI)
 
         # Expand selector polynomials pk.QL, pk.QR, pk.QM, pk.QO, pk.QC
         # into the coset extended Lagrange basis
+        QL_big = self.fft_expand(self.pk.QL)
+        QR_big = self.fft_expand(self.pk.QR)
+        QM_big = self.fft_expand(self.pk.QM)
+        QO_big = self.fft_expand(self.pk.QO)
+        QC_big = self.fft_expand(self.pk.QC)
 
         # Expand permutation grand product polynomial Z into coset extended
         # Lagrange basis
+        Z_big = self.fft_expand(self.Z)
 
         # Expand shifted Z(ω) into coset extended Lagrange basis
+        Z_big_shifted = self.fft_expand(self.Z.shift(1))
 
         # Expand permutation polynomials pk.S1, pk.S2, pk.S3 into coset
         # extended Lagrange basis
+        S1_big = self.fft_expand(self.pk.S1)
+        S2_big = self.fft_expand(self.pk.S2)
+        S3_big = self.fft_expand(self.pk.S3)
 
         # Compute Z_H = X^N - 1, also in evaluation form in the coset
+        Z_H_big = Polynomial(
+            values=[roots_of_unity[group_order * (i % 4)] - 1 for i in range(4 * group_order)],
+            basis=Basis.LAGRANGE,
+        )
 
         # Compute L0, the Lagrange basis polynomial that evaluates to 1 at x = 1 = ω^0
         # and 0 at other roots of unity
