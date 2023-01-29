@@ -302,6 +302,12 @@ class Prover:
         # Compute s1_eval = pk.S1(zeta)
         # Compute s2_eval = pk.S2(zeta)
         # Compute z_shifted_eval = Z(zeta * ω)
+        a_eval = self.A.barycentric_eval(self.zeta)
+        b_eval = self.B.barycentric_eval(self.zeta)
+        c_eval = self.C.barycentric_eval(self.zeta)
+        s1_eval = self.pk.S1.barycentric_eval(self.zeta)
+        s2_eval = self.pk.S2.barycentric_eval(self.zeta)
+        z_shifted_eval = self.Z.barycentric_eval(self.zeta * Scalar.root_of_unity(self.group_order))
 
         # Return a_eval, b_eval, c_eval, s1_eval, s2_eval, z_shifted_eval
         return Message4(a_eval, b_eval, c_eval, s1_eval, s2_eval, z_shifted_eval)
