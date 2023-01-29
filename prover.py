@@ -271,17 +271,24 @@ class Prover:
 
         # Split up T into T1, T2 and T3 (needed because T has degree 3n - 4, so is
         # too big for the trusted setup)
+        QUOT_big_monomial = self.expanded_evals_to_coeffs(QUOT_big)
+        T1 = Polynomial(QUOT_big_monomial.values[:group_order], Basis.MONOMIAL).fft()
+        T2 = Polynomial(QUOT_big_monomial.values[group_order:2 * group_order], Basis.MONOMIAL).fft()
+        T3 = Polynomial(QUOT_big_monomial.values[2 * group_order:3 * group_order], Basis.MONOMIAL).fft()
 
         # Sanity check that we've computed T1, T2, T3 correctly
         assert (
-            T1.barycentric_eval(fft_cofactor)
-            + T2.barycentric_eval(fft_cofactor) * fft_cofactor**group_order
-            + T3.barycentric_eval(fft_cofactor) * fft_cofactor ** (group_order * 2)
+            T1.barycentric_eval(self.fft_cofactor)
+            + T2.barycentric_eval(self.fft_cofactor) * self.fft_cofactor**group_order
+            + T3.barycentric_eval(self.fft_cofactor) * self.fft_cofactor ** (group_order * 2)
         ) == QUOT_big.values[0]
 
         print("Generated T1, T2, T3 polynomials")
 
         # Compute commitments t_lo_1, t_mid_1, t_hi_1 to T1, T2, T3 polynomials
+        t_lo_1 = setup.commit(T1)
+        t_mid_1 = setup.commit(T2)
+        t_hi_1 = setup.commit(T3)
 
         # Return t_lo_1, t_mid_1, t_hi_1
         return Message3(t_lo_1, t_mid_1, t_hi_1)
