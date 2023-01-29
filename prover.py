@@ -400,18 +400,31 @@ class Prover:
         # Check that degree of W_z is not greater than n
         assert W_z_coeffs[group_order:] == [0] * (group_order * 3)
 
+        W_z = Polynomial(W_z_coeffs[:group_order], Basis.MONOMIAL).fft()
+
         # Compute W_z_1 commitment to W_z
+        W_z_1 = self.setup.commit(W_z)
 
         # Generate proof that the provided evaluation of Z(z*w) is correct. This
         # awkwardly different term is needed because the permutation accumulator
         # polynomial Z is the one place where we have to check between adjacent
         # coordinates, and not just within one coordinate.
         # In other words: Compute W_zw = (Z - z_shifted_eval) / (X - zeta * ω)
+        root = Scalar.root_of_unity(group_order)
+        X_minus_zeta_root = Polynomial([Scalar(-zeta * root), Scalar(1)] + [Scalar(0)] * (group_order - 2), Basis.MONOMIAL).fft()
+        X_minus_zeta_root_big = self.fft_expand(X_minus_zeta_root)
+        Z_big = self.fft_expand(self.Z)
+        W_zw_big = (Z_big - self.z_shifted_eval) / X_minus_zeta_root_big
+
+        W_zw_coeffs = self.expanded_evals_to_coeffs(W_zw_big).values
 
         # Check that degree of W_z is not greater than n
         assert W_zw_coeffs[group_order:] == [0] * (group_order * 3)
 
-        # Compute W_z_1 commitment to W_z
+        W_zw = Polynomial(W_zw_coeffs[:group_order], Basis.MONOMIAL).fft()
+
+        # Compute W_zw_1 commitment to W_zw
+        W_zw_1 = self.setup.commit(W_zw)
 
         print("Generated final quotient witness polynomials")
 
