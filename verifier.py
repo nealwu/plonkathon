@@ -1,6 +1,6 @@
 import py_ecc.bn128 as b
 from utils import *
-from dataclasses import dataclass
+from dataclasses import astuple, dataclass
 from curve import *
 from transcript import Transcript
 from poly import Polynomial, Basis
@@ -38,6 +38,7 @@ class VerificationKey:
     # to understand and mixing together a lot of the computations to
     # efficiently batch them
     def verify_proof(self, group_order: int, pf, public=[]) -> bool:
+        return self.verify_proof_unoptimized(group_order, pf, public)
         # 4. Compute challenges
 
         # 5. Compute zero polynomial evaluation Z_H(ζ) = ζ^n - 1
@@ -74,22 +75,79 @@ class VerificationKey:
     # Basic, easier-to-understand version of what's going on
     def verify_proof_unoptimized(self, group_order: int, pf, public=[]) -> bool:
         # 4. Compute challenges
+        beta, gamma, alpha, zeta, v, u = self.compute_challenges(pf)
+        self.beta, self.gamma = beta, gamma
+
+        root = Scalar.root_of_unity(group_order)
 
         # 5. Compute zero polynomial evaluation Z_H(ζ) = ζ^n - 1
+        Z_H_eval = zeta**group_order - 1
 
         # 6. Compute Lagrange polynomial evaluation L_0(ζ)
+        # root = Scalar.root_of_unity(group_order)
+        # L_0_eval = root * Z_H_eval / (group_order * (zeta - root))
+        L_0_eval = Z_H_eval / (group_order * (zeta - 1))
+        # L_0_eval = Polynomial([Scalar(1)] + [Scalar(0)] * (group_order - 1), Basis.LAGRANGE).barycentric_eval(zeta)
 
         # 7. Compute public input polynomial evaluation PI(ζ).
+        PI = Polynomial(
+            [Scalar(-x) for x in public] + [Scalar(0)] * (group_order - len(public)),
+            Basis.LAGRANGE,
+        )
+        PI_eval = PI.barycentric_eval(zeta)
 
         # Recover the commitment to the linearization polynomial R,
         # exactly the same as what was created by the prover
+        a_1, b_1, c_1 = astuple(pf.msg_1)
+        (z_1,) = astuple(pf.msg_2)
+        t_lo_1, t_mid_1, t_hi_1 = astuple(pf.msg_3)
+        a_eval, b_eval, c_eval, s1_eval, s2_eval, z_shifted_eval = astuple(pf.msg_4)
+        W_z_1, W_zw_1 = astuple(pf.msg_5)
+
+        R_com = ec_lincomb([
+            (self.Qm, a_eval * b_eval),
+            (self.Ql, a_eval),
+            (self.Qr, b_eval),
+            (self.Qo, c_eval),
+            (b.G1, PI_eval),
+            (self.Qc, 1),
+            (z_1, self.rlc(a_eval, zeta) * self.rlc(b_eval, 2 * zeta) * self.rlc(c_eval, 3 * zeta) * alpha),
+            (self.S3, -beta * self.rlc(a_eval, s1_eval) * self.rlc(b_eval, s2_eval) * z_shifted_eval * alpha),
+            (b.G1, -(c_eval + gamma) * self.rlc(a_eval, s1_eval) * self.rlc(b_eval, s2_eval) * z_shifted_eval * alpha),
+            (z_1, L_0_eval * alpha**2),
+            (b.G1, -L_0_eval * alpha**2),
+            (t_lo_1, -Z_H_eval),
+            (t_mid_1, -Z_H_eval * zeta**group_order),
+            (t_hi_1, -Z_H_eval * zeta**(2 * group_order)),
+        ])
 
         # Verify that R(z) = 0 and the prover-provided evaluations
         # A(z), B(z), C(z), S1(z), S2(z) are all correct
+        product_com = ec_lincomb([
+            (R_com, 1),
+            (a_1, v),
+            (b_1, v**2),
+            (c_1, v**3),
+            (self.S1, v**4),
+            (self.S2, v**5),
+            (b.G1, -a_eval * v),
+            (b.G1, -b_eval * v**2),
+            (b.G1, -c_eval * v**3),
+            (b.G1, -s1_eval * v**4),
+            (b.G1, -s2_eval * v**5),
+        ])
+
+        if b.pairing(b.add(self.X_2, ec_mul(b.G2, -zeta)), W_z_1) != b.pairing(b.G2, product_com):
+            return False
 
         # Verify that the provided value of Z(zeta*w) is correct
+        z_minus_z_shifted_eval = b.add(z_1, ec_mul(b.G1, -z_shifted_eval))
+        x_minus_zeta_omega = b.add(self.X_2, ec_mul(b.G2, -zeta * root))
 
-        return False
+        if b.pairing(b.G2, z_minus_z_shifted_eval) != b.pairing(x_minus_zeta_omega, W_zw_1):
+            return False
+
+        return True
 
     # Compute challenges (should be same as those computed by prover)
     def compute_challenges(
@@ -103,3 +161,6 @@ class VerificationKey:
         u = transcript.round_5(proof.msg_5)
 
         return beta, gamma, alpha, zeta, v, u
+
+    def rlc(self, term_1, term_2):
+        return term_1 + self.beta * term_2 + self.gamma

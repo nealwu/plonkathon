@@ -1,0 +1,6 @@
+general thoughts on FFT presentation:
+* what is FFT (conversion between monomial basis <=> Lagrange basis)
+* why do we want to do that? multiplication and division are super easy in Lagrange basis, you just multiply / divide element-wise
+* how does it work? FFT is an n log n divide and conquer algorithm; much faster than obvious n^2 algorithm
+* in particular we use roots of unity, evaluate polynomial at each of those values
+* however don't overuse FFT when you don't need it and can handle with O(n) algorithms instead
