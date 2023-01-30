@@ -271,8 +271,6 @@ if __name__ == "__main__":
     # Step 3: Pass verifier test using your own verifier
     with open("test/proof.pickle", "rb") as f:
         proof = pickle.load(f)
-        print("proof:")
-        print(proof)
     verifier_test_unoptimized(setup, proof)
     verifier_test_full(setup, proof)
 

@@ -78,6 +78,8 @@ class VerificationKey:
         beta, gamma, alpha, zeta, v, u = self.compute_challenges(pf)
         self.beta, self.gamma = beta, gamma
 
+        root = Scalar.root_of_unity(group_order)
+
         # 5. Compute zero polynomial evaluation Z_H(ζ) = ζ^n - 1
         Z_H_eval = zeta**group_order - 1
 
@@ -136,10 +138,14 @@ class VerificationKey:
         ])
 
         if b.pairing(b.add(self.X_2, ec_mul(b.G2, -zeta)), W_z_1) != b.pairing(b.G2, product_com):
-            assert False
             return False
 
         # Verify that the provided value of Z(zeta*w) is correct
+        z_minus_z_shifted_eval = b.add(z_1, ec_mul(b.G1, -z_shifted_eval))
+        x_minus_zeta_omega = b.add(self.X_2, ec_mul(b.G2, -zeta * root))
+
+        if b.pairing(b.G2, z_minus_z_shifted_eval) != b.pairing(x_minus_zeta_omega, W_zw_1):
+            return False
 
         return True
 
